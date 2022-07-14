@@ -3,17 +3,15 @@ import { decode } from 'bs58';
 import { box, randomBytes, sign } from 'tweetnacl';
 import {
     Bytes,
-    ConnectOptions,
+    ConnectParams,
     ConnectResult,
-    DecryptOptions,
-    DecryptResult,
-    EncryptOptions,
-    EncryptResult,
-    SignAndSendTransactionOptions,
-    SignAndSendTransactionResult,
-    SignMessageResult,
-    SignTransactionOptions,
-    SignTransactionResult,
+    DecryptInput,
+    DecryptOutput,
+    EncryptInput,
+    EncryptOutput,
+    SignAndSendTransactionOutput,
+    SignMessageOutput,
+    SignTransactionOutput,
     Wallet,
     WalletAccount,
     WalletChain,
@@ -35,7 +33,7 @@ export class SolanaWallet implements Wallet {
 
     private _listeners: { [E in keyof WalletEvents]?: WalletEvents[E][] } = {};
 
-    async connect(options?: ConnectOptions): Promise<ConnectResult> {
+    async connect(options?: ConnectParams): Promise<ConnectResult> {
         return {
             accounts: this.accounts,
             hasMoreAccounts: false,
@@ -59,8 +57,12 @@ export class SolanaWalletAccount implements WalletAccount {
     private _keypair: Keypair;
     private _publicKey: Bytes;
 
-    get publicKey(): Bytes {
+    get address(): Bytes {
         return this._publicKey;
+    }
+
+    get chain(): WalletChain {
+        return WalletChain.SolanaMainnet;
     }
 
     constructor() {
@@ -68,7 +70,7 @@ export class SolanaWalletAccount implements WalletAccount {
         this._publicKey = this._keypair.publicKey.toBytes();
     }
 
-    async signTransaction(rawTransactions: Bytes[], options?: SignTransactionOptions): Promise<SignTransactionResult> {
+    async signTransaction(rawTransactions: Bytes[]): Promise<SignTransactionOutput> {
         const transactions = rawTransactions.map((rawTransaction) => Transaction.from(rawTransaction));
 
         for (const transaction of transactions) {
@@ -80,10 +82,7 @@ export class SolanaWalletAccount implements WalletAccount {
         return { transactions: rawTransactions };
     }
 
-    async signAndSendTransaction(
-        rawTransactions: Bytes[],
-        options?: SignAndSendTransactionOptions
-    ): Promise<SignAndSendTransactionResult> {
+    async signAndSendTransaction(rawTransactions: Bytes[]): Promise<SignAndSendTransactionOutput> {
         const transactions = rawTransactions.map((rawTransaction) => Transaction.from(rawTransaction));
 
         for (const transaction of transactions) {
@@ -102,40 +101,39 @@ export class SolanaWalletAccount implements WalletAccount {
         return { signatures: rawSignatures };
     }
 
-    async signMessage(messages: Bytes[]): Promise<SignMessageResult> {
+    async signMessage(messages: Bytes[]): Promise<SignMessageOutput> {
         const signatures = messages.map((message) => sign.detached(message, this._keypair.secretKey));
 
         return { signatures };
     }
 
-    async encrypt(publicKey: Bytes, cleartexts: Bytes[], options?: EncryptOptions): Promise<EncryptResult> {
-        const sharedKey = box.before(publicKey, this._keypair.secretKey);
+    async encrypt(params: EncryptInput[]): Promise<EncryptOutput[]> {
+        return params.map(({ publicKey, cleartexts }) => {
+            const sharedKey = box.before(publicKey, this._keypair.secretKey);
 
-        const nonces = [];
-        const ciphertexts = [];
-        for (let i = 0; i < cleartexts.length; i++) {
-            nonces[i] = randomBytes(32);
-            ciphertexts[i] = box.after(cleartexts[i], nonces[i], sharedKey);
-        }
+            const nonces = [];
+            const ciphertexts = [];
+            for (let i = 0; i < cleartexts.length; i++) {
+                nonces[i] = randomBytes(32);
+                ciphertexts[i] = box.after(cleartexts[i], nonces[i], sharedKey);
+            }
 
-        return { ciphertexts, nonces, cipher: WalletCipher['x25519-xsalsa20-poly1305'] };
+            return { ciphertexts, nonces, cipher: WalletCipher['x25519-xsalsa20-poly1305'] };
+        });
     }
 
-    async decrypt(
-        publicKey: Bytes,
-        ciphertexts: Bytes[],
-        nonces: Bytes[],
-        options?: DecryptOptions
-    ): Promise<DecryptResult> {
-        const sharedKey = box.before(publicKey, this._keypair.secretKey);
+    async decrypt(params: DecryptInput[]): Promise<DecryptOutput[]> {
+        return params.map(({ publicKey, ciphertexts, nonces }) => {
+            const sharedKey = box.before(publicKey, this._keypair.secretKey);
 
-        const cleartexts = [];
-        for (let i = 0; i < cleartexts.length; i++) {
-            const cleartext = box.open.after(ciphertexts[i], nonces[i], sharedKey);
-            if (!cleartext) throw new Error('message authentication failed');
-            cleartexts[i] = cleartext;
-        }
+            const cleartexts = [];
+            for (let i = 0; i < cleartexts.length; i++) {
+                const cleartext = box.open.after(ciphertexts[i], nonces[i], sharedKey);
+                if (!cleartext) throw new Error('message authentication failed');
+                cleartexts[i] = cleartext;
+            }
 
-        return { cleartexts, cipher: WalletCipher['x25519-xsalsa20-poly1305'] };
+            return { cleartexts, cipher: WalletCipher['x25519-xsalsa20-poly1305'] };
+        });
     }
 }

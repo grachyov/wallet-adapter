@@ -7,5 +7,5 @@ declare const window: WalletsWindow;
 
 (function () {
     window.wallets = window.wallets || [];
-    window.wallets.push('register', [new SolanaWallet()]);
+    window.wallets.push({ method: 'register', wallets: [new SolanaWallet()] });
 })();

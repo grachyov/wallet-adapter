@@ -30,22 +30,52 @@ export type WalletsCommand = WalletsCommandGet | WalletsCommandRegister | Wallet
 /**
  * Get the wallets that have been registered.
  */
-export type WalletsCommandGet = ['get', (wallets: Readonly<Wallet[]>) => void];
+export interface WalletsCommandGet {
+    /**
+     * TODO: docs
+     */
+    method: 'get';
+    /**
+     * Function that will be called with all wallets that have been registered.
+     */
+    callback: (wallets: Readonly<Wallet[]>) => void;
+}
 
 /**
  * Register one or more wallets. This emits a `register` event.
  */
-export type WalletsCommandRegister = ['register', Readonly<Wallet[]>];
+export interface WalletsCommandRegister {
+    /**
+     * TODO: docs
+     */
+    method: 'register';
+    /**
+     * One or more wallets to register.
+     */
+    wallets: Readonly<Wallet[]>;
+}
 
 /**
  * Add an event listener to subscribe to events.
  */
-export type WalletsCommandOn<E extends keyof WalletsEvents = keyof WalletsEvents> = [
-    'on',
-    E,
-    WalletsEvents[E],
-    (unsubscribe: () => void) => void
-];
+export interface WalletsCommandOn<E extends keyof WalletsEvents = keyof WalletsEvents> {
+    /**
+     * TODO: docs
+     */
+    method: 'on';
+    /**
+     * Event name to listen for.
+     */
+    event: E;
+    /**
+     * Function that will be called when the event is emitted.
+     */
+    listener: WalletsEvents[E];
+    /**
+     * Function that will be called with a function to remove the event listener and unsubscribe.
+     */
+    callback: (unsubscribe: () => void) => void;
+}
 
 /**
  * TODO: docs
@@ -57,33 +87,9 @@ export type WalletsCommands = WalletsCommand[];
  */
 export type Wallets = Readonly<{
     /**
-     * Get the wallets that have been registered.
+     * TODO: docs
      *
-     * @param method  'get'
-     * @param callback Function that will be called with all wallets that have been registered.
+     * @param commands TODO: docs
      */
-    push(method: WalletsCommandGet[0], callback: WalletsCommandGet[1]): any;
-
-    /**
-     * Register one or more wallets. This emits a `register` event.
-     *
-     * @param method  'register'
-     * @param wallets One or more wallets to register.
-     */
-    push(method: WalletsCommandRegister[0], wallets: WalletsCommandRegister[1]): any;
-
-    /**
-     * Add an event listener to subscribe to events.
-     *
-     * @param method   'on'
-     * @param event    Event name to listen for.
-     * @param listener Function that will be called when the event is emitted.
-     * @param callback Function that will be called with a function to remove the event listener and unsubscribe.
-     */
-    push(
-        method: WalletsCommandOn[0],
-        event: WalletsCommandOn[1],
-        listener: WalletsCommandOn[2],
-        callback: WalletsCommandOn[3]
-    ): any;
+    push(...commands: WalletsCommands): any;
 }>;

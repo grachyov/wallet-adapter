@@ -104,11 +104,11 @@ export type Wallet = Readonly<{
     /**
      * Connect to one or more accounts in the wallet.
      *
-     * @param options Options to configure connecting.
+     * @param params Params to configure connecting.
      *
      * @return Result of connecting.
      */
-    connect(options?: ConnectOptions): Promise<ConnectResult>;
+    connect(params: ConnectParams): Promise<ConnectResult>;
 
     /**
      * Add an event listener to subscribe to events.
@@ -124,27 +124,27 @@ export type Wallet = Readonly<{
 /**
  * Options to configure connecting.
  */
-export type ConnectOptions = Readonly<{
+export type ConnectParams = Readonly<{
     /**
-     * Optional chain to discover accounts using. Default to whatever the wallet wants.
+     * Chain to discover accounts using. Default to whatever the wallet wants.
      */
-    chain?: WalletChain;
+    chain: WalletChain;
 
     /**
-     * One or more optional public keys of the accounts in the wallet to authorize an app to use.
+     * One or more optional public key addresses of the accounts in the wallet to authorize an app to use.
      *
-     * If public keys are provided:
+     * If addresses are provided:
      *   - The wallet must return only the accounts requested.
      *   - If any account isn't found, or authorization is refused for any account, TODO: determine desired behavior -- is it better to fail, or return a subset?
      *   - If the wallet has already authorized the app to use all the accounts requested, they should be returned without prompting the user.
      *   - If the `silent` option is not provided or `false`, the wallet may prompt the user if needed to authorize accounts.
      *   - If the `silent` option is `true`, the wallet must not prompt the user, and should return requested accounts the app is authorized to use.
      *
-     * If no public keys are provided:
+     * If no addresses are provided:
      *   - If the `silent` option is not provided or `false`, the wallet should prompt the user to select accounts to authorize the app to use.
      *   - If the `silent` option is `true`, the wallet must not prompt the user, and should return any accounts the app is authorized to use.
      */
-    publicKeys?: Bytes[];
+    addresses?: Bytes[];
 
     /**
      * Set to true to request the authorized accounts without prompting the user.
@@ -174,9 +174,14 @@ export type ConnectResult = Readonly<{
  */
 export type WalletAccount = Readonly<{
     /**
-     * Public key of the account, corresponding with the secret key to sign, encrypt, or decrypt using.
+     * Public key address of the account, corresponding with the secret key to sign, encrypt, or decrypt using.
      */
-    publicKey: Bytes;
+    address: Bytes;
+
+    /**
+     * Chain to simulate and send transactions using.
+     */
+    chain: WalletChain;
 
     /**
      * Sign one or more serialized transactions using the account's secret key.
@@ -184,11 +189,10 @@ export type WalletAccount = Readonly<{
      * This method covers existing `signTransaction` and `signAllTransactions` functionality, matching the SMS Mobile Wallet Adapter SDK.
      *
      * @param transactions One or more serialized transactions.
-     * @param options      Options to configure signing transactions.
      *
      * @return Result of signing one or more transactions.
      */
-    signTransaction(transactions: Bytes[], options?: SignTransactionOptions): Promise<SignTransactionResult>;
+    signTransaction(transactions: Bytes[]): Promise<SignTransactionOutput>;
 
     /**
      * Sign one or more serialized transactions using the account's secret key and send them to the network.
@@ -196,14 +200,10 @@ export type WalletAccount = Readonly<{
      * This method covers existing `signAndSendTransaction` functionality, and also provides an `All` version of the same, matching the SMS Mobile Wallet Adapter SDK.
      *
      * @param transactions One or more serialized transactions.
-     * @param options      Options to configure signing and sending transactions.
      *
      * @return Result of signing and sending one or more transactions.
      */
-    signAndSendTransaction(
-        transactions: Bytes[],
-        options?: SignAndSendTransactionOptions
-    ): Promise<SignAndSendTransactionResult>;
+    signAndSendTransaction(transactions: Bytes[]): Promise<SignAndSendTransactionOutput>;
 
     /**
      * Sign one or more messages using the account's secret key.
@@ -213,46 +213,31 @@ export type WalletAccount = Readonly<{
      *
      * @return Result of signing.
      */
-    signMessage(messages: Bytes[]): Promise<SignMessageResult>;
+    signMessage(messages: Bytes[]): Promise<SignMessageOutput>;
 
     /**
      * Encrypt one or more cleartexts using the account's secret key.
      *
-     * @param publicKey  Public key to derive a shared key to encrypt the data using.
-     * @param cleartexts One or more cleartexts to encrypt.
-     * @param options    Options to configure encryption.
+     * @param params Params for encryption.
      *
      * @return Result of encryption.
      */
-    encrypt(publicKey: Bytes, cleartexts: Bytes[], options?: EncryptOptions): Promise<EncryptResult>;
+    encrypt(params: EncryptInput[]): Promise<EncryptOutput[]>;
 
     /**
      * Decrypt one or more ciphertexts using the account's secret key.
      *
-     * @param publicKey   Public key to derive a shared key to decrypt the data using.
-     * @param ciphertexts One or more ciphertexts to decrypt.
-     * @param nonces      One or more nonces to use.
-     * @param options     Options to configure decryption.
+     * @param params Params for decryption.
      *
      * @return Result of decryption.
      */
-    decrypt(publicKey: Bytes, ciphertexts: Bytes[], nonces: Bytes[], options?: DecryptOptions): Promise<DecryptResult>;
-}>;
-
-/**
- * Options to configure signing transactions.
- */
-export type SignTransactionOptions = Readonly<{
-    /**
-     * Optional chain to simulate the transaction using. Default to whatever the wallet wants.
-     */
-    chain?: WalletChain;
+    decrypt(params: DecryptInput[]): Promise<DecryptOutput[]>;
 }>;
 
 /**
  * Result of signing one or more transactions.
  */
-export type SignTransactionResult = Readonly<{
+export type SignTransactionOutput = Readonly<{
     /**
      * One or more signed, serialized transactions.
      * Return transactions rather than signatures allows multisig wallets, program wallets, and other wallets that use
@@ -262,19 +247,9 @@ export type SignTransactionResult = Readonly<{
 }>;
 
 /**
- * Options to configure signing and sending transactions.
- */
-export type SignAndSendTransactionOptions = Readonly<{
-    /**
-     * Optional chain to simulate and send the transaction using. Default to whatever the wallet wants.
-     */
-    chain?: WalletChain;
-}>;
-
-/**
  * Result of signing and sending one or more transactions.
  */
-export type SignAndSendTransactionResult = Readonly<{
+export type SignAndSendTransactionOutput = Readonly<{
     /**
      * One or more "primary" transaction signatures, as raw bytes.
      * We return raw bytes to avoid ambiguity or dependencies related to the signature encoding.
@@ -285,7 +260,7 @@ export type SignAndSendTransactionResult = Readonly<{
 /**
  * Result of signing.
  */
-export type SignMessageResult = Readonly<{
+export type SignMessageOutput = Readonly<{
     /**
      * One or more signatures, as raw bytes.
      * We return raw bytes to avoid ambiguity or dependencies related to the signature encoding.
@@ -294,9 +269,17 @@ export type SignMessageResult = Readonly<{
 }>;
 
 /**
- * Options to configure encryption.
+ * Params for encryption.
  */
-export type EncryptOptions = Readonly<{
+export type EncryptInput = Readonly<{
+    /**
+     * Public key to derive a shared key to encrypt the data using.
+     */
+    publicKey: Bytes;
+    /**
+     * One or more cleartexts to decrypt.
+     */
+    cleartexts: Bytes[];
     /**
      * Optional cipher to use. Default to whatever the wallet wants.
      */
@@ -306,7 +289,7 @@ export type EncryptOptions = Readonly<{
 /**
  * Result of encryption.
  */
-export type EncryptResult = Readonly<{
+export type EncryptOutput = Readonly<{
     /**
      * One or more ciphertexts that were encrypted, corresponding with the cleartexts provided.
      */
@@ -322,9 +305,21 @@ export type EncryptResult = Readonly<{
 }>;
 
 /**
- * Options to configure decryption.
+ * Params for decryption.
  */
-export type DecryptOptions = Readonly<{
+export type DecryptInput = Readonly<{
+    /**
+     * Public key to derive a shared key to decrypt the data using.
+     */
+    publicKey: Bytes;
+    /**
+     * One or more ciphertexts to decrypt.
+     */
+    ciphertexts: Bytes[];
+    /**
+     * One or more nonces to use.
+     */
+    nonces: Bytes[];
     /**
      * Optional cipher to use. Default to whatever the wallet wants.
      */
@@ -334,7 +329,7 @@ export type DecryptOptions = Readonly<{
 /**
  * Result of decryption.
  */
-export type DecryptResult = Readonly<{
+export type DecryptOutput = Readonly<{
     /**
      * One or more cleartexts that were decrypted, corresponding with the ciphertexts provided.
      */
