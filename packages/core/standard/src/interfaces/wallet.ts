@@ -129,7 +129,7 @@ export type ConnectInput = Readonly<{
     chains: WalletChain[];
 
     /**
-     * One or more optional public key addresses of the accounts in the wallet to authorize an app to use.
+     * Optional public key addresses of the accounts in the wallet to authorize an app to use.
      *
      * If addresses are provided:
      *   - The wallet must return only the accounts requested.
@@ -213,7 +213,7 @@ export type WalletAccount = Readonly<{
     signMessage(input: SignMessageInput): Promise<SignMessageOutput>;
 
     /**
-     * Encrypt one or more cleartexts using the account's secret key.
+     * Encrypt cleartexts using the account's secret key.
      *
      * @param inputs Inputs for encryption.
      *
@@ -222,7 +222,7 @@ export type WalletAccount = Readonly<{
     encrypt(inputs: EncryptInput[]): Promise<EncryptOutput[]>;
 
     /**
-     * Decrypt one or more ciphertexts using the account's secret key.
+     * Decrypt ciphertexts using the account's secret key.
      *
      * @param inputs Inputs for decryption.
      *
@@ -236,17 +236,17 @@ export type WalletAccount = Readonly<{
  */
 export type SignTransactionInput = Readonly<{
     /**
-     * One or more serialized transactions.
+     * Serialized transactions, as raw bytes.
      */
     transactions: Bytes[];
 }>;
 
 /**
- * Result of signing one or more transactions.
+ * Result of signing transactions.
  */
 export type SignTransactionOutput = Readonly<{
     /**
-     * One or more signed, serialized transactions.
+     * Signed, serialized transactions, as raw bytes.
      * Return transactions rather than signatures allows multisig wallets, program wallets, and other wallets that use
      * meta-transactions to return a modified, signed transaction.
      */
@@ -258,7 +258,7 @@ export type SignTransactionOutput = Readonly<{
  */
 export type SignAndSendTransactionInput = Readonly<{
     /**
-     * One or more serialized transactions.
+     * Serialized transactions, as raw bytes.
      */
     transactions: Bytes[];
 }>;
@@ -268,8 +268,7 @@ export type SignAndSendTransactionInput = Readonly<{
  */
 export type SignAndSendTransactionOutput = Readonly<{
     /**
-     * One or more "primary" transaction signatures, as raw bytes.
-     * We return raw bytes to avoid ambiguity or dependencies related to the signature encoding.
+     * "Primary" transaction signatures, as raw bytes.
      */
     signatures: Bytes[];
 }>;
@@ -279,7 +278,7 @@ export type SignAndSendTransactionOutput = Readonly<{
  */
 export type SignMessageInput = Readonly<{
     /**
-     * One or more messages to sign, as raw bytes.
+     * Messages to sign, as raw bytes.
      */
     messages: Bytes[];
 }>;
@@ -289,8 +288,7 @@ export type SignMessageInput = Readonly<{
  */
 export type SignMessageOutput = Readonly<{
     /**
-     * One or more signatures, as raw bytes.
-     * We return raw bytes to avoid ambiguity or dependencies related to the signature encoding.
+     * Message signatures, as raw bytes.
      */
     signatures: Bytes[];
 }>;
@@ -304,7 +302,7 @@ export type EncryptInput = Readonly<{
      */
     publicKey: Bytes;
     /**
-     * One or more cleartexts to decrypt.
+     * Cleartexts to decrypt.
      */
     cleartexts: Bytes[];
     /**
@@ -318,11 +316,11 @@ export type EncryptInput = Readonly<{
  */
 export type EncryptOutput = Readonly<{
     /**
-     * One or more ciphertexts that were encrypted, corresponding with the cleartexts provided.
+     * Ciphertexts that were encrypted, corresponding with the cleartexts provided.
      */
     ciphertexts: Bytes[];
     /**
-     * One or more nonces that were used for encryption, corresponding with each ciphertext.
+     * Nonces that were used for encryption, corresponding with each ciphertext.
      */
     nonces: Bytes[];
     /**
@@ -340,11 +338,11 @@ export type DecryptInput = Readonly<{
      */
     publicKey: Bytes;
     /**
-     * One or more ciphertexts to decrypt.
+     * Ciphertexts to decrypt.
      */
     ciphertexts: Bytes[];
     /**
-     * One or more nonces to use.
+     * Nonces to use for decryption, corresponding with each ciphertext.
      */
     nonces: Bytes[];
     /**
@@ -358,7 +356,7 @@ export type DecryptInput = Readonly<{
  */
 export type DecryptOutput = Readonly<{
     /**
-     * One or more cleartexts that were decrypted, corresponding with the ciphertexts provided.
+     * Cleartexts that were decrypted, corresponding with the ciphertexts provided.
      */
     cleartexts: Bytes[];
 }>;

@@ -15,9 +15,9 @@ export interface WalletsWindow extends Window {
  */
 export interface WalletsEvents {
     /**
-     * Emitted when one or more wallets are registered.
+     * Emitted when wallets are registered.
      *
-     * @param wallets One or more wallets that were registered.
+     * @param wallets Wallets that were registered.
      */
     register(...wallets: Wallet[]): void;
 }
@@ -42,7 +42,7 @@ export interface WalletsCommandGet {
 }
 
 /**
- * Register one or more wallets. This emits a `register` event.
+ * Register wallets. This emits a `register` event.
  */
 export interface WalletsCommandRegister {
     /**
@@ -50,7 +50,7 @@ export interface WalletsCommandRegister {
      */
     method: 'register';
     /**
-     * One or more wallets to register.
+     * Wallets to register.
      */
     wallets: Readonly<Wallet[]>;
 }
