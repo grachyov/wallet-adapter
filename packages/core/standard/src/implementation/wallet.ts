@@ -3,8 +3,8 @@ import { decode } from 'bs58';
 import { box, randomBytes, sign } from 'tweetnacl';
 import {
     Bytes,
-    ConnectParams,
-    ConnectResult,
+    ConnectInput,
+    ConnectOutput,
     DecryptInput,
     DecryptOutput,
     EncryptInput,
@@ -33,7 +33,7 @@ export class SolanaWallet implements Wallet {
 
     private _listeners: { [E in keyof WalletEvents]?: WalletEvents[E][] } = {};
 
-    async connect(options?: ConnectParams): Promise<ConnectResult> {
+    async connect(options?: ConnectInput): Promise<ConnectOutput> {
         return {
             accounts: this.accounts,
             hasMoreAccounts: false,

@@ -1,3 +1,3 @@
 export * from './window';
 export * from './wallet';
-export * from './setup';
+export * from './initialize';

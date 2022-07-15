@@ -16,12 +16,10 @@ export enum WalletChain {
      * Solana Mainnet (beta), e.g. https://api.mainnet-beta.solana.com
      */
     SolanaMainnet = 'solana:mainnet',
-
     /**
      * Solana Devnet, e.g. https://api.devnet.solana.com
      */
     SolanaDevnet = 'solana:devnet',
-
     /**
      * Solana Testnet, e.g. https://api.testnet.solana.com
      */
@@ -33,7 +31,8 @@ export enum WalletChain {
  */
 export enum WalletCipher {
     /**
-     * Default for NaCl.
+     * Default in NaCl.
+     * Curve25519 scalar multiplication, Salsa20 secret-key encryption, and Poly1305 one-time authentication.
      */
     'x25519-xsalsa20-poly1305' = 'x25519-xsalsa20-poly1305',
 }
@@ -47,7 +46,6 @@ export type Bytes = Readonly<Uint8Array>;
  * Events emitted by wallets.
  */
 export interface WalletEvents {
-    // TODO: figure out `accounts` on Wallet
     /**
      * Emitted when the accounts in the wallet are added or removed.
      * An app can listen for this event and call `connect` without arguments to request accounts again.
@@ -84,7 +82,6 @@ export type Wallet = Readonly<{
      */
     icon: string;
 
-    // TODO: figure out `accountsChanged` event
     /**
      * List the accounts the app is authorized to use.
      * This can be set by the wallet so the app can use authorized accounts on the initial page load.
@@ -92,7 +89,8 @@ export type Wallet = Readonly<{
     accounts: Readonly<WalletAccount[]>;
 
     /**
-     * List the chains supported for simulating and sending transactions.
+     * List the chains supported for signing, simulating, and sending transactions.
+     * This can be updated by the wallet, which will emit a `chainsChanged` event when this occurs.
      */
     chains: Readonly<WalletChain[]>;
 
@@ -102,13 +100,13 @@ export type Wallet = Readonly<{
     ciphers: Readonly<WalletCipher[]>;
 
     /**
-     * Connect to one or more accounts in the wallet.
+     * Connect to accounts in the wallet.
      *
-     * @param params Params to configure connecting.
+     * @param input Input for connecting.
      *
-     * @return Result of connecting.
+     * @return Output of connecting.
      */
-    connect(params: ConnectParams): Promise<ConnectResult>;
+    connect(input: ConnectInput): Promise<ConnectOutput>;
 
     /**
      * Add an event listener to subscribe to events.
@@ -122,13 +120,13 @@ export type Wallet = Readonly<{
 }>;
 
 /**
- * Options to configure connecting.
+ * Input for connecting.
  */
-export type ConnectParams = Readonly<{
+export type ConnectInput = Readonly<{
     /**
-     * Chain to discover accounts using. Default to whatever the wallet wants.
+     * Chains to discover accounts using.
      */
-    chain: WalletChain;
+    chains: WalletChain[];
 
     /**
      * One or more optional public key addresses of the accounts in the wallet to authorize an app to use.
@@ -154,9 +152,9 @@ export type ConnectParams = Readonly<{
 }>;
 
 /**
- * Result of connecting.
+ * Output of connecting.
  */
-export type ConnectResult = Readonly<{
+export type ConnectOutput = Readonly<{
     /**
      * List of accounts in the wallet that the app has been authorized to use.
      */
@@ -179,59 +177,68 @@ export type WalletAccount = Readonly<{
     address: Bytes;
 
     /**
-     * Chain to simulate and send transactions using.
+     * Chain to sign, simulate, and send transactions using.
      */
     chain: WalletChain;
 
     /**
-     * Sign one or more serialized transactions using the account's secret key.
+     * Sign transactions using the account's secret key.
      * The transactions may already be partially signed, and may even have a "primary" signature.
      * This method covers existing `signTransaction` and `signAllTransactions` functionality, matching the SMS Mobile Wallet Adapter SDK.
      *
-     * @param transactions One or more serialized transactions.
+     * @param input Input for signing transactions.
      *
-     * @return Result of signing one or more transactions.
+     * @return Output of signing transactions.
      */
-    signTransaction(transactions: Bytes[]): Promise<SignTransactionOutput>;
+    signTransaction(input: SignTransactionInput): Promise<SignTransactionOutput>;
 
     /**
-     * Sign one or more serialized transactions using the account's secret key and send them to the network.
+     * Sign transactions using the account's secret key and send them to the network.
      * The transactions may already be partially signed, and may even have a "primary" signature.
      * This method covers existing `signAndSendTransaction` functionality, and also provides an `All` version of the same, matching the SMS Mobile Wallet Adapter SDK.
      *
-     * @param transactions One or more serialized transactions.
+     * @param input Input for signing and sending transactions.
      *
-     * @return Result of signing and sending one or more transactions.
+     * @return Output of signing and sending transactions.
      */
-    signAndSendTransaction(transactions: Bytes[]): Promise<SignAndSendTransactionOutput>;
+    signAndSendTransaction(input: SignAndSendTransactionInput): Promise<SignAndSendTransactionOutput>;
 
     /**
-     * Sign one or more messages using the account's secret key.
-     * TODO: determine prefixing behavior, edit readme
+     * Sign messages (arbitrary bytes) using the account's secret key.
      *
-     * @param messages One or more messages to sign.
+     * @param input Input for signing messages.
      *
-     * @return Result of signing.
+     * @return Output of signing messages.
      */
-    signMessage(messages: Bytes[]): Promise<SignMessageOutput>;
+    signMessage(input: SignMessageInput): Promise<SignMessageOutput>;
 
     /**
      * Encrypt one or more cleartexts using the account's secret key.
      *
-     * @param params Params for encryption.
+     * @param inputs Inputs for encryption.
      *
      * @return Result of encryption.
      */
-    encrypt(params: EncryptInput[]): Promise<EncryptOutput[]>;
+    encrypt(inputs: EncryptInput[]): Promise<EncryptOutput[]>;
 
     /**
      * Decrypt one or more ciphertexts using the account's secret key.
      *
-     * @param params Params for decryption.
+     * @param inputs Inputs for decryption.
      *
      * @return Result of decryption.
      */
-    decrypt(params: DecryptInput[]): Promise<DecryptOutput[]>;
+    decrypt(inputs: DecryptInput[]): Promise<DecryptOutput[]>;
+}>;
+
+/**
+ * Input for signing transactions.
+ */
+export type SignTransactionInput = Readonly<{
+    /**
+     * One or more serialized transactions.
+     */
+    transactions: Bytes[];
 }>;
 
 /**
@@ -247,7 +254,17 @@ export type SignTransactionOutput = Readonly<{
 }>;
 
 /**
- * Result of signing and sending one or more transactions.
+ * Input for signing and sending transactions.
+ */
+export type SignAndSendTransactionInput = Readonly<{
+    /**
+     * One or more serialized transactions.
+     */
+    transactions: Bytes[];
+}>;
+
+/**
+ * Output of signing and sending transactions.
  */
 export type SignAndSendTransactionOutput = Readonly<{
     /**
@@ -258,7 +275,17 @@ export type SignAndSendTransactionOutput = Readonly<{
 }>;
 
 /**
- * Result of signing.
+ * Input for signing messages.
+ */
+export type SignMessageInput = Readonly<{
+    /**
+     * One or more messages to sign, as raw bytes.
+     */
+    messages: Bytes[];
+}>;
+
+/**
+ * Output of signing one or messages.
  */
 export type SignMessageOutput = Readonly<{
     /**
@@ -269,7 +296,7 @@ export type SignMessageOutput = Readonly<{
 }>;
 
 /**
- * Params for encryption.
+ * Input for encryption.
  */
 export type EncryptInput = Readonly<{
     /**
@@ -281,13 +308,13 @@ export type EncryptInput = Readonly<{
      */
     cleartexts: Bytes[];
     /**
-     * Optional cipher to use. Default to whatever the wallet wants.
+     * Optional cipher to use for encryption. Default to whatever the wallet wants.
      */
     cipher?: WalletCipher;
 }>;
 
 /**
- * Result of encryption.
+ * Output of encryption.
  */
 export type EncryptOutput = Readonly<{
     /**
@@ -305,7 +332,7 @@ export type EncryptOutput = Readonly<{
 }>;
 
 /**
- * Params for decryption.
+ * Input for decryption.
  */
 export type DecryptInput = Readonly<{
     /**
@@ -321,21 +348,17 @@ export type DecryptInput = Readonly<{
      */
     nonces: Bytes[];
     /**
-     * Optional cipher to use. Default to whatever the wallet wants.
+     * Cipher to use for decryption.
      */
-    cipher?: WalletCipher;
+    cipher: WalletCipher;
 }>;
 
 /**
- * Result of decryption.
+ * Output of decryption.
  */
 export type DecryptOutput = Readonly<{
     /**
      * One or more cleartexts that were decrypted, corresponding with the ciphertexts provided.
      */
     cleartexts: Bytes[];
-    /**
-     * Cipher that was used for decryption.
-     */
-    cipher: WalletCipher;
 }>;

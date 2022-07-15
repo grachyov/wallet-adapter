@@ -1,8 +1,8 @@
-import { Wallet, WalletsCommands, WalletsEvents, WalletsWindow } from '../interfaces';
+import { Wallet, WalletsCommand, WalletsEvents, WalletsWindow } from '../interfaces';
 
 declare const window: WalletsWindow;
 
-function push(...commands: WalletsCommands) {
+export function push(...commands: WalletsCommand[]) {
     const wallets: Wallet[] = [];
     const listeners: { [E in keyof WalletsEvents]?: WalletsEvents[E][] } = {};
 
@@ -16,9 +16,9 @@ function push(...commands: WalletsCommands) {
                 break;
             case 'register':
                 {
-                    const { wallets: wallets_ } = command;
-                    wallets.push(...wallets_);
-                    listeners['register']?.forEach((listener) => listener(...wallets_));
+                    const { wallets: newWallets } = command;
+                    wallets.push(...newWallets);
+                    listeners['register']?.forEach((listener) => listener(...newWallets));
                 }
                 break;
             case 'on':
@@ -34,11 +34,10 @@ function push(...commands: WalletsCommands) {
     }
 }
 
-export function setup() {
-    const commands = (window.wallets = window.wallets || []);
-
-    if (Array.isArray(commands)) {
+export function initialize() {
+    const wallets = (window.wallets = window.wallets || []);
+    if (Array.isArray(wallets)) {
         window.wallets = { push };
-        push(...commands);
+        push(...wallets);
     }
 }

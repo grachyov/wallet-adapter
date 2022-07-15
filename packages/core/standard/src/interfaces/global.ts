@@ -7,7 +7,7 @@ export interface WalletsWindow extends Window {
     /**
      * Global `wallets` object.
      */
-    wallets?: WalletsCommands | Wallets;
+    wallets?: WalletsCommand[] | Wallets;
 }
 
 /**
@@ -78,11 +78,6 @@ export interface WalletsCommandOn<E extends keyof WalletsEvents = keyof WalletsE
 }
 
 /**
- * TODO: docs
- */
-export type WalletsCommands = WalletsCommand[];
-
-/**
  * Global `wallets` object API.
  */
 export type Wallets = Readonly<{
@@ -91,5 +86,5 @@ export type Wallets = Readonly<{
      *
      * @param commands TODO: docs
      */
-    push(...commands: WalletsCommands): any;
+    push(...commands: WalletsCommand[]): any;
 }>;
