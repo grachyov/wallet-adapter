@@ -7,20 +7,20 @@ export interface WalletsWindow extends Window {
     /**
      * Global `wallets` object.
      */
-    wallets?: WalletsCommand[] | Wallets;
+    wallets?: Wallets | WalletsCommand[];
 }
 
 /**
- * Events emitted by the global `wallets` object.
+ * Global `wallets` object API.
  */
-export interface WalletsEvents {
+export type Wallets = Readonly<{
     /**
-     * Emitted when wallets are registered.
+     * TODO: docs
      *
-     * @param wallets Wallets that were registered.
+     * @param commands TODO: docs
      */
-    register(...wallets: Wallet[]): void;
-}
+    push(...commands: WalletsCommand[]): any;
+}>;
 
 /**
  * TODO: docs
@@ -78,13 +78,13 @@ export interface WalletsCommandOn<E extends keyof WalletsEvents = keyof WalletsE
 }
 
 /**
- * Global `wallets` object API.
+ * Events emitted by the global `wallets` object.
  */
-export type Wallets = Readonly<{
+export interface WalletsEvents {
     /**
-     * TODO: docs
+     * Emitted when wallets are registered.
      *
-     * @param commands TODO: docs
+     * @param wallets Wallets that were registered.
      */
-    push(...commands: WalletsCommand[]): any;
-}>;
+    register(...wallets: Wallet[]): void;
+}
