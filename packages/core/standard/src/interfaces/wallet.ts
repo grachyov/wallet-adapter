@@ -250,7 +250,7 @@ export type SignTransactionOutput = Readonly<{
      * Return transactions rather than signatures allows multisig wallets, program wallets, and other wallets that use
      * meta-transactions to return a modified, signed transaction.
      */
-    transactions: Bytes[];
+    signedTransactions: Bytes[];
 }>;
 
 /**

@@ -9,8 +9,11 @@ import {
     DecryptOutput,
     EncryptInput,
     EncryptOutput,
+    SignAndSendTransactionInput,
     SignAndSendTransactionOutput,
+    SignMessageInput,
     SignMessageOutput,
+    SignTransactionInput,
     SignTransactionOutput,
     Wallet,
     WalletAccount,
@@ -43,13 +46,15 @@ export class SolanaWallet implements Wallet {
     on<E extends keyof WalletEvents>(event: E, listener: WalletEvents[E]): () => void {
         this._listeners[event]?.push(listener) || (this._listeners[event] = [listener]);
 
-        return (): void => {
-            this._listeners[event] = this._listeners[event]?.filter((l) => listener !== l);
-        };
+        return (): void => this._off(event, listener);
     }
 
     private _emit<E extends keyof WalletEvents>(event: E) {
         this._listeners[event]?.forEach((listener) => listener());
+    }
+
+    private _off<E extends keyof WalletEvents>(event: E, listener: WalletEvents[E]) {
+        this._listeners[event] = this._listeners[event]?.filter((l) => listener !== l);
     }
 }
 
@@ -70,45 +75,47 @@ export class SolanaWalletAccount implements WalletAccount {
         this._publicKey = this._keypair.publicKey.toBytes();
     }
 
-    async signTransaction(rawTransactions: Bytes[]): Promise<SignTransactionOutput> {
-        const transactions = rawTransactions.map((rawTransaction) => Transaction.from(rawTransaction));
+    async signTransaction(input: SignTransactionInput): Promise<SignTransactionOutput> {
+        const transactions = input.transactions.map((rawTransaction) => Transaction.from(rawTransaction));
 
         for (const transaction of transactions) {
             transaction.partialSign(this._keypair);
         }
 
-        rawTransactions = transactions.map((transaction) => transaction.serialize({ requireAllSignatures: false }));
+        const signedTransactions = transactions.map((transaction) =>
+            transaction.serialize({ requireAllSignatures: false })
+        );
 
-        return { transactions: rawTransactions };
+        return { signedTransactions };
     }
 
-    async signAndSendTransaction(rawTransactions: Bytes[]): Promise<SignAndSendTransactionOutput> {
-        const transactions = rawTransactions.map((rawTransaction) => Transaction.from(rawTransaction));
+    async signAndSendTransaction(input: SignAndSendTransactionInput): Promise<SignAndSendTransactionOutput> {
+        const transactions = input.transactions.map((rawTransaction) => Transaction.from(rawTransaction));
 
         for (const transaction of transactions) {
             transaction.partialSign(this._keypair);
         }
-
-        rawTransactions = transactions.map((transaction) => transaction.serialize());
 
         const connection = new Connection(clusterApiUrl('mainnet-beta'));
         const signatures = await Promise.all(
-            rawTransactions.map((serializedTransaction) => connection.sendRawTransaction(serializedTransaction))
+            transactions.map(async function (transaction) {
+                const rawTransaction = transaction.serialize();
+                const signature = await connection.sendRawTransaction(rawTransaction);
+                return decode(signature);
+            })
         );
-
-        const rawSignatures = signatures.map(decode);
-
-        return { signatures: rawSignatures };
-    }
-
-    async signMessage(messages: Bytes[]): Promise<SignMessageOutput> {
-        const signatures = messages.map((message) => sign.detached(message, this._keypair.secretKey));
 
         return { signatures };
     }
 
-    async encrypt(params: EncryptInput[]): Promise<EncryptOutput[]> {
-        return params.map(({ publicKey, cleartexts }) => {
+    async signMessage(input: SignMessageInput): Promise<SignMessageOutput> {
+        const signatures = input.messages.map((message) => sign.detached(message, this._keypair.secretKey));
+
+        return { signatures };
+    }
+
+    async encrypt(inputs: EncryptInput[]): Promise<EncryptOutput[]> {
+        return inputs.map(({ publicKey, cleartexts }) => {
             const sharedKey = box.before(publicKey, this._keypair.secretKey);
 
             const nonces = [];
@@ -122,8 +129,8 @@ export class SolanaWalletAccount implements WalletAccount {
         });
     }
 
-    async decrypt(params: DecryptInput[]): Promise<DecryptOutput[]> {
-        return params.map(({ publicKey, ciphertexts, nonces }) => {
+    async decrypt(inputs: DecryptInput[]): Promise<DecryptOutput[]> {
+        return inputs.map(({ publicKey, ciphertexts, nonces }) => {
             const sharedKey = box.before(publicKey, this._keypair.secretKey);
 
             const cleartexts = [];
