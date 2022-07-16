@@ -1,3 +1,3 @@
 export * from './wallet';
-export * from './global';
+export * from './window';
 export * from './errors';

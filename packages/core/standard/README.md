@@ -12,7 +12,7 @@ Wallet and dapp devs are encouraged to provide their feedback and have it integr
 
 ## Code
 
-- [Global `window.wallets` interface](./src/interfaces/global.ts)
+- [Global `window.wallets` interface](./src/interfaces/window.ts)
 - [Wallet interface](./src/interfaces/wallet.ts)
 - [Reference implementation for how wallets attach to the window](./src/implementation/window.ts)
 

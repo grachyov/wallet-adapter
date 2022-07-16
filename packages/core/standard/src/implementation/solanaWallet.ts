@@ -66,6 +66,10 @@ export class SolanaWalletAccount implements WalletAccount {
         return this._publicKey;
     }
 
+    get publicKey(): Bytes {
+        return this._publicKey;
+    }
+
     get chain(): WalletChain {
         return WalletChain.SolanaMainnet;
     }
@@ -99,8 +103,7 @@ export class SolanaWalletAccount implements WalletAccount {
         const connection = new Connection(clusterApiUrl('mainnet-beta'));
         const signatures = await Promise.all(
             transactions.map(async function (transaction) {
-                const rawTransaction = transaction.serialize();
-                const signature = await connection.sendRawTransaction(rawTransaction);
+                const signature = await connection.sendRawTransaction(transaction.serialize());
                 return decode(signature);
             })
         );

@@ -16,14 +16,21 @@ export enum WalletChain {
      * Solana Mainnet (beta), e.g. https://api.mainnet-beta.solana.com
      */
     SolanaMainnet = 'solana:mainnet',
+
     /**
      * Solana Devnet, e.g. https://api.devnet.solana.com
      */
     SolanaDevnet = 'solana:devnet',
+
     /**
      * Solana Testnet, e.g. https://api.testnet.solana.com
      */
     SolanaTestnet = 'solana:testnet',
+
+    /**
+     * Ethereum (mainnet)
+     */
+    Ethereum = 'ethereum:1',
 }
 
 /**
@@ -172,9 +179,15 @@ export type ConnectOutput = Readonly<{
  */
 export type WalletAccount = Readonly<{
     /**
-     * Public key address of the account, corresponding with the secret key to sign, encrypt, or decrypt using.
+     * Address of the account, corresponding with the public key.
+     * This may be the same as the public key on some chains (e.g. Solana), or different on others (e.g. Ethereum).
      */
     address: Bytes;
+
+    /**
+     * Public key of the account, corresponding with the secret key to sign, encrypt, or decrypt using.
+     */
+    publicKey: Bytes;
 
     /**
      * Chain to sign, simulate, and send transactions using.
@@ -261,6 +274,7 @@ export type SignAndSendTransactionInput = Readonly<{
      * Serialized transactions, as raw bytes.
      */
     transactions: Bytes[];
+    // TODO: figure out if options for sending need to be supported
 }>;
 
 /**
@@ -301,10 +315,12 @@ export type EncryptInput = Readonly<{
      * Public key to derive a shared key to encrypt the data using.
      */
     publicKey: Bytes;
+
     /**
      * Cleartexts to decrypt.
      */
     cleartexts: Bytes[];
+
     /**
      * Optional cipher to use for encryption. Default to whatever the wallet wants.
      */
@@ -319,10 +335,12 @@ export type EncryptOutput = Readonly<{
      * Ciphertexts that were encrypted, corresponding with the cleartexts provided.
      */
     ciphertexts: Bytes[];
+
     /**
      * Nonces that were used for encryption, corresponding with each ciphertext.
      */
     nonces: Bytes[];
+
     /**
      * Cipher that was used for encryption.
      */
@@ -337,14 +355,17 @@ export type DecryptInput = Readonly<{
      * Public key to derive a shared key to decrypt the data using.
      */
     publicKey: Bytes;
+
     /**
      * Ciphertexts to decrypt.
      */
     ciphertexts: Bytes[];
+
     /**
      * Nonces to use for decryption, corresponding with each ciphertext.
      */
     nonces: Bytes[];
+
     /**
      * Cipher to use for decryption.
      */

@@ -35,6 +35,7 @@ export interface WalletsCommandGet {
      * TODO: docs
      */
     method: 'get';
+
     /**
      * Function that will be called with all wallets that have been registered.
      */
@@ -49,6 +50,7 @@ export interface WalletsCommandRegister {
      * TODO: docs
      */
     method: 'register';
+
     /**
      * Wallets to register.
      */
@@ -63,14 +65,17 @@ export interface WalletsCommandOn<E extends keyof WalletsEvents = keyof WalletsE
      * TODO: docs
      */
     method: 'on';
+
     /**
      * Event name to listen for.
      */
     event: E;
+
     /**
      * Function that will be called when the event is emitted.
      */
     listener: WalletsEvents[E];
+
     /**
      * Function that will be called with a function to remove the event listener and unsubscribe.
      */
