@@ -1,3 +1,4 @@
 export * from './window';
-export * from './solanaWallet';
 export * from './initialize';
+export * from './solanaWallet';
+export * from './ethereumWallet';
