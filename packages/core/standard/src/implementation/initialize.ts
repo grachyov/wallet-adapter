@@ -2,14 +2,14 @@ import { Wallet, WalletsCommand, WalletsEvents, WalletsWindow } from '../interfa
 
 declare const window: WalletsWindow;
 
-export function initialize() {
+export function initialize(): void {
     const commands = (window.wallets = window.wallets || []);
 
     if (Array.isArray(commands)) {
         const wallets: Wallet[] = [];
         const listeners: { [E in keyof WalletsEvents]?: WalletsEvents[E][] } = {};
 
-        function push(...commands: WalletsCommand[]) {
+        function push(...commands: WalletsCommand[]): void {
             for (const command of commands) {
                 switch (command.method) {
                     case 'get':

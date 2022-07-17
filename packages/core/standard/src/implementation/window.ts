@@ -1,4 +1,5 @@
 import { WalletsWindow } from '../interfaces';
+import { EthereumWallet } from './ethereumWallet';
 import { SolanaWallet } from './solanaWallet';
 
 // This code will be run by every wallet extension, and also by Wallet Adapter.
@@ -7,5 +8,8 @@ declare const window: WalletsWindow;
 
 (function () {
     window.wallets = window.wallets || [];
+    // The first wallet to load registers itself on the window
     window.wallets.push({ method: 'register', wallets: [new SolanaWallet()] });
+    // The second wallet to load registers itself on the window
+    window.wallets.push({ method: 'register', wallets: [new EthereumWallet()] });
 })();

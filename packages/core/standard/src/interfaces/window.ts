@@ -19,7 +19,7 @@ export type Wallets = Readonly<{
      *
      * @param commands TODO: docs
      */
-    push(...commands: WalletsCommand[]): any;
+    push(...commands: WalletsCommand[]): void;
 }>;
 
 /**
