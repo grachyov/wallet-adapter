@@ -102,7 +102,7 @@ export class SolanaWalletAccount implements WalletAccount {
 
         const connection = new Connection(clusterApiUrl('mainnet-beta'));
         const signatures = await Promise.all(
-            transactions.map(async function (transaction) {
+            transactions.map(async (transaction) => {
                 const signature = await connection.sendRawTransaction(transaction.serialize());
                 return decode(signature);
             })
