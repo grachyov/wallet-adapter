@@ -1,6 +1,8 @@
 /**
  * Versions of the Wallet API.
  */
+import { UnionToIntersection } from './typescript';
+
 export enum WalletVersion {
     /**
      * Initial version.
@@ -52,7 +54,7 @@ export type Bytes = Readonly<Uint8Array>;
 /**
  * Events emitted by wallets.
  */
-export interface WalletEvents {
+export interface WalletEvent {
     /**
      * Emitted when the accounts in the wallet are added or removed.
      * An app can listen for this event and call `connect` without arguments to request accounts again.
@@ -66,14 +68,49 @@ export interface WalletEvents {
     chainsChanged(): void;
 }
 
-/**
- * TODO: docs
- */
-export type Wallet = Readonly<{
+type SolanaWalletThatCanEncryptAndOrDecrypt = Wallet<SolanaWalletAccountThatCanEncryptAndOrDecrypt>;
+
+type SolanaWalletAccountThatCanEncryptAndOrDecrypt = WalletAccount<
+    WalletChain.SolanaMainnet,
+    // NOTE: declare that this will implement encrypt and / or decrypt methods
+    EncryptPermission | DecryptPermission | {}
+>;
+
+// NOTE: A dummy instance of the wallet to inspect type safety of
+const wallet = {} as SolanaWalletThatCanEncryptAndOrDecrypt;
+
+const connectToSolanaWalletWithOnlyEncryptPermission = await wallet.connect({
+    // NOTE: This should fail, because Ethereum is not in the set of chains supported by accounts of this wallet instance
+    chains: [WalletChain.Ethereum],
+    // NOTE: This should succeed, because 'encrypt' is one of the permissions available for accounts of this wallet instance ...
+    //       but right now, the type of `permissions` is also incorrectly including the properties of `WalletAccount` (address, chain, publicKey)
+    permissions: ['encrypt'],
+});
+
+// NOTE: This should succeed, because the subset of accounts returned can encrypt, and I've requested permission to encrypt
+connectToSolanaWalletWithOnlyEncryptPermission.accounts[0].encrypt;
+
+// NOTE: This should fail, because the subset of accounts returned can only encrypt, even though the superset can encrypt and decrypt
+connectToSolanaWalletWithOnlyEncryptPermission.accounts[0].decrypt;
+
+type ChainOfAccount<Account> = Account extends WalletAccount<infer Chain, any> ? Chain : never;
+
+type PermissionOfAccount<Account> = Account extends WalletAccount<any, infer Permission> ? Permission : never;
+
+/** TODO: docs */
+export type Wallet<
+    Account extends WalletAccount<Chain, Permission>,
+    Event extends WalletEvent = WalletEvent,
+    Cipher extends string = WalletCipher,
+    Version extends string = WalletVersion,
+    // NOTE: infer the set of chains and permissions supported from the type of accounts supported
+    Chain = ChainOfAccount<Account>,
+    Permission = PermissionOfAccount<Account>
+> = Readonly<{
     /**
      * Version of the Wallet API.
      */
-    version: WalletVersion;
+    version: Version;
 
     /**
      * Name of the wallet.
@@ -93,18 +130,18 @@ export type Wallet = Readonly<{
      * List the accounts the app is authorized to use.
      * This can be set by the wallet so the app can use authorized accounts on the initial page load.
      */
-    accounts: Readonly<WalletAccount[]>;
+    accounts: readonly Account[];
 
     /**
      * List the chains supported for signing, simulating, and sending transactions.
      * This can be updated by the wallet, which will emit a `chainsChanged` event when this occurs.
      */
-    chains: Readonly<WalletChain[]>;
+    chains: readonly Chain[];
 
     /**
      * List the ciphers supported for encryption and decryption.
      */
-    ciphers: Readonly<WalletCipher[]>;
+    ciphers: readonly Cipher[];
 
     /**
      * Connect to accounts in the wallet.
@@ -113,7 +150,15 @@ export type Wallet = Readonly<{
      *
      * @return Output of connecting.
      */
-    connect(input: ConnectInput): Promise<ConnectOutput>;
+    // NOTE: what I want to express here (and don't know how to do) is this:
+    //       of the set of accounts, chains, and permissions available within the wallet ...
+    //       select some subset of accounts, providing a set of chains and permissions ...
+    //       such that ConnectInput's `chains` are the chains provided to the connect method ...
+    //       and ConnectInput's `permissions` are the keys of the permissions provided to the connect method ...
+    //       such that ConnectOutput's `accounts` will strictly belong to the chains and permissions provided
+    connect<C extends Chain, P extends Permission>(
+        input: ConnectInput<Account, C, P>
+    ): Promise<ConnectOutput<Account, C, P>>;
 
     /**
      * Add an event listener to subscribe to events.
@@ -123,17 +168,26 @@ export type Wallet = Readonly<{
      *
      * @return Function to remove the event listener and unsubscribe.
      */
-    on<E extends keyof WalletEvents>(event: E, listener: WalletEvents[E]): () => void;
+    on<E extends keyof Event>(event: E, listener: Event[E]): () => void;
 }>;
 
 /**
  * Input for connecting.
  */
-export type ConnectInput = Readonly<{
+export type ConnectInput<
+    Account extends WalletAccount<Chain, Permission>,
+    Chain extends string = ChainOfAccount<Account>,
+    Permission extends WalletAccountPermission = PermissionOfAccount<Account>
+> = Readonly<{
     /**
      * Chains to discover accounts using.
      */
-    chains: WalletChain[];
+    chains: Chain[];
+
+    /**
+     * Optional account permissions to request authorization for.
+     */
+    permissions?: Array<keyof Permission>;
 
     /**
      * Optional public key addresses of the accounts in the wallet to authorize an app to use.
@@ -161,11 +215,15 @@ export type ConnectInput = Readonly<{
 /**
  * Output of connecting.
  */
-export type ConnectOutput = Readonly<{
+export type ConnectOutput<
+    Account extends WalletAccount<Chain, Permission>,
+    Chain extends string = ChainOfAccount<Account>,
+    Permission extends WalletAccountPermission = PermissionOfAccount<Account>
+> = Readonly<{
     /**
      * List of accounts in the wallet that the app has been authorized to use.
      */
-    accounts: WalletAccount[];
+    accounts: Account[];
 
     /**
      * Will be true if there are more accounts in the wallet besides the `accounts` returned.
@@ -177,23 +235,39 @@ export type ConnectOutput = Readonly<{
 /**
  * An account in the wallet that the app has been authorized to use.
  */
-export type WalletAccount = Readonly<{
-    /**
-     * Address of the account, corresponding with the public key.
-     * This may be the same as the public key on some chains (e.g. Solana), or different on others (e.g. Ethereum).
-     */
-    address: Bytes;
+export type WalletAccount<Chain extends string, Permission extends WalletAccountPermission> = Permission &
+    Readonly<{
+        /**
+         * Address of the account, corresponding with the public key.
+         * This may be the same as the public key on some chains (e.g. Solana), or different on others (e.g. Ethereum).
+         */
+        address: Bytes;
 
-    /**
-     * Public key of the account, corresponding with the secret key to sign, encrypt, or decrypt using.
-     */
-    publicKey: Bytes;
+        /**
+         * Public key of the account, corresponding with the secret key to sign, encrypt, or decrypt using.
+         */
+        publicKey: Bytes;
 
-    /**
-     * Chain to sign, simulate, and send transactions using.
-     */
-    chain: WalletChain;
+        /**
+         * Chain to sign, simulate, and send transactions using.
+         */
+        chain: Chain;
+    }>;
 
+/** TODO: docs */
+export type WalletAccountPermission =
+    | SignTransactionPermission
+    | SignAndSendTransactionPermission
+    | SignMessagePermission
+    | EncryptPermission
+    | DecryptPermission
+    | {};
+
+/** TODO: docs */
+export type WalletAccountPermissions = UnionToIntersection<WalletAccountPermission>;
+
+/** TODO: docs */
+export type SignTransactionPermission = Readonly<{
     /**
      * Sign transactions using the account's secret key.
      * The transactions may already be partially signed, and may even have a "primary" signature.
@@ -204,44 +278,6 @@ export type WalletAccount = Readonly<{
      * @return Output of signing transactions.
      */
     signTransaction(input: SignTransactionInput): Promise<SignTransactionOutput>;
-
-    /**
-     * Sign transactions using the account's secret key and send them to the network.
-     * The transactions may already be partially signed, and may even have a "primary" signature.
-     * This method covers existing `signAndSendTransaction` functionality, and also provides an `All` version of the same, matching the SMS Mobile Wallet Adapter SDK.
-     *
-     * @param input Input for signing and sending transactions.
-     *
-     * @return Output of signing and sending transactions.
-     */
-    signAndSendTransaction(input: SignAndSendTransactionInput): Promise<SignAndSendTransactionOutput>;
-
-    /**
-     * Sign messages (arbitrary bytes) using the account's secret key.
-     *
-     * @param input Input for signing messages.
-     *
-     * @return Output of signing messages.
-     */
-    signMessage(input: SignMessageInput): Promise<SignMessageOutput>;
-
-    /**
-     * Encrypt cleartexts using the account's secret key.
-     *
-     * @param inputs Inputs for encryption.
-     *
-     * @return Result of encryption.
-     */
-    encrypt(inputs: EncryptInput[]): Promise<EncryptOutput[]>;
-
-    /**
-     * Decrypt ciphertexts using the account's secret key.
-     *
-     * @param inputs Inputs for decryption.
-     *
-     * @return Result of decryption.
-     */
-    decrypt(inputs: DecryptInput[]): Promise<DecryptOutput[]>;
 }>;
 
 /**
@@ -266,6 +302,20 @@ export type SignTransactionOutput = Readonly<{
     signedTransactions: Bytes[];
 }>;
 
+/** TODO: docs */
+export type SignAndSendTransactionPermission = Readonly<{
+    /**
+     * Sign transactions using the account's secret key and send them to the network.
+     * The transactions may already be partially signed, and may even have a "primary" signature.
+     * This method covers existing `signAndSendTransaction` functionality, and also provides an `All` version of the same, matching the SMS Mobile Wallet Adapter SDK.
+     *
+     * @param input Input for signing and sending transactions.
+     *
+     * @return Output of signing and sending transactions.
+     */
+    signAndSendTransaction(input: SignAndSendTransactionInput): Promise<SignAndSendTransactionOutput>;
+}>;
+
 /**
  * Input for signing and sending transactions.
  */
@@ -287,6 +337,18 @@ export type SignAndSendTransactionOutput = Readonly<{
     signatures: Bytes[];
 }>;
 
+/** TODO: docs */
+export type SignMessagePermission = Readonly<{
+    /**
+     * Sign messages (arbitrary bytes) using the account's secret key.
+     *
+     * @param input Input for signing messages.
+     *
+     * @return Output of signing messages.
+     */
+    signMessage(input: SignMessageInput): Promise<SignMessageOutput>;
+}>;
+
 /**
  * Input for signing messages.
  */
@@ -305,6 +367,18 @@ export type SignMessageOutput = Readonly<{
      * Message signatures, as raw bytes.
      */
     signatures: Bytes[];
+}>;
+
+/** TODO: docs */
+export type EncryptPermission = Readonly<{
+    /**
+     * Encrypt cleartexts using the account's secret key.
+     *
+     * @param inputs Inputs for encryption.
+     *
+     * @return Result of encryption.
+     */
+    encrypt(inputs: EncryptInput[]): Promise<EncryptOutput[]>;
 }>;
 
 /**
@@ -345,6 +419,18 @@ export type EncryptOutput = Readonly<{
      * Cipher that was used for encryption.
      */
     cipher: WalletCipher;
+}>;
+
+/** TODO: docs */
+export type DecryptPermission = Readonly<{
+    /**
+     * Decrypt ciphertexts using the account's secret key.
+     *
+     * @param inputs Inputs for decryption.
+     *
+     * @return Result of decryption.
+     */
+    decrypt(inputs: DecryptInput[]): Promise<DecryptOutput[]>;
 }>;
 
 /**

@@ -19,7 +19,7 @@ import {
     WalletAccount,
     WalletChain,
     WalletCipher,
-    WalletEvents,
+    WalletEvent,
     WalletVersion,
 } from '../interfaces';
 
@@ -31,7 +31,7 @@ export class SolanaWallet implements Wallet {
     private _accounts = [new SolanaWalletAccount()];
     private _chains = [WalletChain.SolanaMainnet];
     private _ciphers = [WalletCipher['x25519-xsalsa20-poly1305']];
-    private _listeners: { [E in keyof WalletEvents]?: WalletEvents[E][] } = {};
+    private _listeners: { [E in keyof WalletEvent]?: WalletEvent[E][] } = {};
 
     get version(): WalletVersion {
         return this._version;
@@ -45,15 +45,15 @@ export class SolanaWallet implements Wallet {
         return this._icon;
     }
 
-    get accounts(): Readonly<WalletAccount[]> {
+    get accounts(): readonly WalletAccount[] {
         return [...this._accounts];
     }
 
-    get chains(): Readonly<WalletChain[]> {
+    get chains(): readonly WalletChain[] {
         return [...this._chains];
     }
 
-    get ciphers(): Readonly<WalletCipher[]> {
+    get ciphers(): readonly WalletCipher[] {
         return [...this._ciphers];
     }
 
@@ -64,17 +64,17 @@ export class SolanaWallet implements Wallet {
         };
     }
 
-    on<E extends keyof WalletEvents>(event: E, listener: WalletEvents[E]): () => void {
+    on<E extends keyof WalletEvent>(event: E, listener: WalletEvent[E]): () => void {
         this._listeners[event]?.push(listener) || (this._listeners[event] = [listener]);
 
         return (): void => this._off(event, listener);
     }
 
-    private _emit<E extends keyof WalletEvents>(event: E): void {
+    private _emit<E extends keyof WalletEvent>(event: E): void {
         this._listeners[event]?.forEach((listener) => listener());
     }
 
-    private _off<E extends keyof WalletEvents>(event: E, listener: WalletEvents[E]): void {
+    private _off<E extends keyof WalletEvent>(event: E, listener: WalletEvent[E]): void {
         this._listeners[event] = this._listeners[event]?.filter((l) => listener !== l);
     }
 }

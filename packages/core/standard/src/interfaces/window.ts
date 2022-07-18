@@ -22,9 +22,7 @@ export type Wallets = Readonly<{
     push(...commands: WalletsCommand[]): void;
 }>;
 
-/**
- * TODO: docs
- */
+/** TODO: docs */
 export type WalletsCommand = WalletsCommandGet | WalletsCommandRegister | WalletsCommandOn;
 
 /**
@@ -39,7 +37,7 @@ export interface WalletsCommandGet {
     /**
      * Function that will be called with all wallets that have been registered.
      */
-    callback: (wallets: Readonly<Wallet[]>) => void;
+    callback: (wallets: readonly Wallet[]) => void;
 }
 
 /**
@@ -54,7 +52,7 @@ export interface WalletsCommandRegister {
     /**
      * Wallets to register.
      */
-    wallets: Readonly<Wallet[]>;
+    wallets: readonly Wallet[];
 }
 
 /**
